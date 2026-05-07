@@ -70,16 +70,20 @@
         // ★ここにデプロイしたGASのウェブアプリURLを貼り付けてください
         const GAS_URL = "https://script.google.com/macros/s/AKfycbwQcEETpvClwUF_OTpSYc8GCJBuzjCifjcktzs_zSuRlnFMSPXV0dU-Y20e9ou2avL5/exec";
 
+        <script>
+        // ★ここにデプロイした最新のGASのURL（末尾が /exec のもの）を貼り付けてください
+        const GAS_URL = "ここにURLをペースト";
+
         document.getElementById('postForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const btn = document.getElementById('submitBtn');
             const originalBtnText = btn.innerHTML;
             
-            // 送信中の状態
+            // 送信中の表示に切り替え
             btn.disabled = true;
-            btn.innerHTML = '<span class="animate-spin text-xl">↻</span> 送信中...';
-            btn.classList.add('opacity-70', 'cursor-not-allowed');
+            btn.innerHTML = '<span>↻</span> 送信中...';
+            btn.style.opacity = "0.7";
 
             const payload = {
                 category: document.getElementById('category').value,
@@ -88,26 +92,25 @@
             };
 
             try {
-                // GASへのPOST送信
-                const response = await fetch(GAS_URL, {
+                // GASへのデータ送信（一番確実な方法に変更しました）
+                await fetch(GAS_URL, {
                     method: 'POST',
-                    mode: 'no-cors', // GASのCORS制限回避
+                    mode: 'no-cors', // これが重要：セキュリティ制限を回避します
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
 
-                // 完了アラートとリダイレクト
-                alert('ありがとうございます！投稿を受け付けました。\n管理者が内容を確認した後、ライブラリに反映されます。');
+                // 送信後の処理
+                alert('ありがとうございます！投稿を受け付けました。\n管理者がスプレッドシートで「承認（チェック）」を付けると、ライブラリに表示されます。');
                 window.location.href = "index.html";
 
             } catch (error) {
                 console.error('Submission error:', error);
-                alert('送信に失敗しました。ネットワーク環境を確認して、もう一度お試しください。');
+                alert('送信に失敗しました。URLが正しいか確認してください。');
                 
-                // ボタンを元に戻す
                 btn.disabled = false;
                 btn.innerHTML = originalBtnText;
-                btn.classList.remove('opacity-70', 'cursor-not-allowed');
+                btn.style.opacity = "1";
             }
         });
     </script>
