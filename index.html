@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        body { background-color: #f0fdf4; font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; }
+        body { background-color: #f0fdf4; font-family: sans-serif; }
         .card { background: white; transition: all 0.2s; border: 1px solid #e2e8f0; }
         .card:hover { transform: translateY(-3px); border-color: #86efac; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
         .post-checkbox { transform: scale(1.5); cursor: pointer; }
@@ -36,36 +36,39 @@
     <main class="max-w-4xl mx-auto">
         <div id="loading" class="text-center py-20">
             <div class="inline-block animate-spin mb-4 text-green-500 text-3xl">↻</div>
-            <p class="text-green-700 font-bold text-xl">最新の知恵を同期中...</p>
+            <p class="text-green-700 font-bold">最新の知恵を読み込み中...</p>
         </div>
         <div id="results" class="grid gap-6"></div>
     </main>
 
     <div id="captureArea" class="fixed top-0 left-0 -z-10 bg-white p-12 w-[800px]" style="display:none;">
-        <h2 class="text-4xl font-bold text-green-800 mb-10 border-b-4 border-green-500 pb-4">🌿 みんなの知恵セレクション</h2>
+        <h2 class="text-4xl font-bold text-green-800 mb-10 border-b-4 border-green-500 pb-4 text-center">🌿 みんなの知恵セレクション</h2>
         <div id="captureContent" class="space-y-10"></div>
     </div>
 
     <script>
         // ★ここにデプロイした最新のGASのURL（末尾が /exec のもの）を貼り付けてください
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbxTQOwtcbx6IelfSL7DXPLra_qRsjIKf-OY7_2DjrqhkjxC6dJl3LdXbc9Yw2eZfGLT/exec"; 
-        let allData = [];
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbzpra8yoic3yDWwgdanvYkmynGjWayMbVtLPkbgNACTI8xVzxltIIIR8Cz-dr36cxwB/exec"; 
+        
+        let allData = [];      // マスターデータ
+        let currentData = [];  // 現在画面に表示されているデータ（検索結果など）
 
         // データの取得
         async function fetchData() {
             try {
                 const response = await fetch(GAS_URL);
-                if (!response.ok) throw new Error('通信エラー');
-                allData = await response.json();
-                renderData(allData);
+                const data = await response.json();
+                
+                // 【新着順にソート】
+                allData = data.sort((a, b) => {
+                    return new Date(b.timestamp) - new Date(a.timestamp);
+                });
+                
+                currentData = [...allData];
+                renderData(currentData);
                 document.getElementById('loading').style.display = 'none';
             } catch (error) {
-                console.error('Error:', error);
-                document.getElementById('loading').innerHTML = `
-                    <div class="p-8 bg-white rounded-2xl border-2 border-red-100 text-red-500 shadow-sm">
-                        <p class="font-bold text-lg mb-2">データの読み込みに失敗しました</p>
-                        <p class="text-sm">URLの設定が正しいか、スプレッドシートの「公開」列にチェックが入ったデータがあるか確認してください。</p>
-                    </div>`;
+                document.getElementById('loading').innerHTML = `<p class="text-red-500">読み込みに失敗しました。GASの設定を確認してください。</p>`;
             }
         }
 
@@ -74,36 +77,26 @@
             const container = document.getElementById('results');
             container.innerHTML = '';
 
-            if (!data || data.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-green-200">
-                        <p class="text-gray-400 mb-4">表示できる「承認済み」の知恵がありません。</p>
-                        <p class="text-sm text-green-600 font-bold text-lg">投稿後、スプレッドシートのE列にチェックを入れると公開されます！</p>
-                    </div>`;
+            if (data.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-400 py-20">該当する知恵が見つかりません。</p>';
                 return;
             }
 
             data.forEach((item, index) => {
-                let dateDisplay = '不明';
-                if (item.timestamp) {
-                    const d = new Date(item.timestamp);
-                    dateDisplay = isNaN(d) ? item.timestamp : d.toLocaleDateString('ja-JP');
-                }
+                const d = new Date(item.timestamp);
+                const dateStr = isNaN(d) ? '不明' : d.toLocaleDateString('ja-JP');
                 
                 const div = document.createElement('div');
-                div.className = 'card p-6 md:p-8 rounded-3xl flex gap-6 items-start shadow-sm';
+                div.className = 'card p-6 md:p-8 rounded-3xl flex gap-6 items-start';
                 div.innerHTML = `
                     <input type="checkbox" class="post-checkbox mt-1.5 accent-green-600" data-index="${index}">
                     <div class="flex-1">
                         <div class="flex justify-between items-center mb-4">
-                            <span class="text-xs font-bold text-green-700 bg-green-100 px-3 py-1.5 rounded-xl border border-green-200 uppercase tracking-wider">${item.category || 'カテゴリなし'}</span>
-                            <span class="text-xs text-gray-400 font-mono italic">${dateDisplay}</span>
+                            <span class="text-xs font-bold text-green-700 bg-green-100 px-3 py-1.5 rounded-xl border border-green-200">${item.category}</span>
+                            <span class="text-xs text-gray-400 font-mono">${dateStr}</span>
                         </div>
-                        <p class="text-gray-800 text-lg leading-relaxed whitespace-pre-wrap mb-6 font-medium">${item.content || '（本文なし）'}</p>
-                        <div class="flex items-center gap-2 text-green-600 font-bold bg-green-50 inline-block px-3 py-1 rounded-lg border border-green-100">
-                            <span class="text-sm">#</span>
-                            <span class="text-sm">${item.tag || 'タグなし'}</span>
-                        </div>
+                        <p class="text-gray-800 text-lg leading-relaxed whitespace-pre-wrap mb-4 font-medium">${item.content}</p>
+                        <div class="text-sm text-green-600 font-bold bg-green-50 px-3 py-1 rounded-lg border border-green-100 inline-block"># ${item.tag}</div>
                     </div>
                 `;
                 container.appendChild(div);
@@ -112,25 +105,23 @@
 
         // 検索機能
         document.getElementById('searchInput').addEventListener('input', (e) => {
-            const query = e.target.value.trim().toLowerCase();
-            if (!query) {
-                renderData(allData);
-                return;
+            const keywords = e.target.value.trim().toLowerCase().split(/\s+/).filter(k => k);
+            if (keywords.length === 0) {
+                currentData = [...allData];
+            } else {
+                currentData = allData.filter(item => {
+                    const targetText = `${item.category} ${item.content} ${item.tag}`.toLowerCase();
+                    return keywords.every(kw => targetText.includes(kw));
+                });
             }
-
-            const keywords = query.split(/\s+/);
-            const filtered = allData.filter(item => {
-                const targetText = `${item.category} ${item.content} ${item.tag}`.toLowerCase();
-                return keywords.every(kw => targetText.includes(kw));
-            });
-            renderData(filtered);
+            renderData(currentData);
         });
 
-        // 画像生成機能
+        // 画像生成機能（currentDataを参照するように修正）
         async function generateImage() {
-            const checkboxes = document.querySelectorAll('.post-checkbox:checked');
-            if (checkboxes.length === 0) {
-                alert('画像に含めたい知恵にチェックを入れてください。');
+            const selectedChecks = document.querySelectorAll('.post-checkbox:checked');
+            if (selectedChecks.length === 0) {
+                alert('画像にしたい知恵にチェックを入れてください。');
                 return;
             }
 
@@ -139,41 +130,31 @@
             captureContent.innerHTML = '';
             captureArea.style.display = 'block';
 
-            checkboxes.forEach(cb => {
-                const item = allData[cb.dataset.index];
+            selectedChecks.forEach(cb => {
+                // ここが重要：現在表示中の currentData から正しいインデックスで取得
+                const item = currentData[cb.dataset.index];
                 const d = new Date(item.timestamp);
                 const dateStr = isNaN(d) ? '' : d.toLocaleDateString('ja-JP');
 
                 const itemHtml = `
-                    <div class="p-10 border-l-[12px] border-green-400 bg-green-50 rounded-r-3xl shadow-sm">
+                    <div class="p-10 border-l-[12px] border-green-400 bg-green-50 rounded-r-3xl">
                         <div class="flex justify-between mb-4">
-                            <span class="text-green-800 text-xl font-black underline decoration-green-300 decoration-4 underline-offset-8">【${item.category}】</span>
-                            <span class="text-gray-400 font-mono font-bold">${dateStr}</span>
+                            <span class="text-green-800 text-xl font-bold">【${item.category}】</span>
+                            <span class="text-gray-400 font-mono">${dateStr}</span>
                         </div>
                         <div class="text-gray-800 text-3xl leading-relaxed mb-6 font-medium">${item.content}</div>
-                        <div class="text-lg text-green-700 font-bold bg-white inline-block px-4 py-2 rounded-xl border-2 border-green-100 shadow-sm"># ${item.tag}</div>
+                        <div class="text-lg text-green-700 font-bold bg-white inline-block px-4 py-2 rounded-xl border border-green-100"># ${item.tag}</div>
                     </div>
                 `;
                 captureContent.insertAdjacentHTML('beforeend', itemHtml);
             });
 
-            try {
-                const canvas = await html2canvas(captureArea, {
-                    scale: 2,
-                    useCORS: true,
-                    backgroundColor: "#ffffff"
-                });
-                
-                const link = document.createElement('a');
-                link.download = `知恵ライブラリ_${new Date().getTime()}.png`;
-                link.href = canvas.toDataURL("image/png");
-                link.click();
-            } catch (err) {
-                console.error('画像生成失敗:', err);
-                alert('画像の作成中にエラーが発生しました。');
-            } finally {
-                captureArea.style.display = 'none';
-            }
+            const canvas = await html2canvas(captureArea, { scale: 2, backgroundColor: "#ffffff" });
+            const link = document.createElement('a');
+            link.download = `知恵セレクション_${new Date().getTime()}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+            captureArea.style.display = 'none';
         }
 
         fetchData();
