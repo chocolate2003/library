@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知恵を投稿する - みんなの知恵ライブラリ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f0fdf4; font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; }
+        .form-container { background: white; border: 1px solid #e2e8f0; }
+        .input-field { border: 2px solid #f0fdf4; transition: all 0.2s; }
+        .input-field:focus { border-color: #86efac; outline: none; background-color: #fff; box-shadow: 0 0 0 4px rgba(134, 239, 172, 0.1); }
+    </style>
+</head>
+<body class="p-4 md:p-8 text-gray-700 min-h-screen flex flex-col items-center">
+
+    <header class="w-full max-w-2xl text-center mb-8">
+        <h1 class="text-3xl font-bold text-green-800 mb-2">🌿 知恵を投稿する</h1>
+        <p class="text-green-600">あなたの素敵な体験やノウハウを共有しましょう</p>
+    </header>
+
+    <main class="w-full max-w-2xl">
+        <div class="form-container p-6 md:p-10 rounded-3xl shadow-xl">
+            <form id="postForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-bold text-green-700 mb-2 ml-1">カテゴリ</label>
+                    <select id="category" required class="input-field w-full p-4 rounded-2xl bg-green-50 text-gray-700 font-medium">
+                        <option value="" disabled selected>選択してください</option>
+                        <option value="仕事の効率化">仕事の効率化</option>
+                        <option value="ライフハック">ライフハック</option>
+                        <option value="健康・食事">健康・食事</option>
+                        <option value="人間関係">人間関係</option>
+                        <option value="おすすめ">おすすめ</option>
+                        <option value="その他">その他</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-green-700 mb-2 ml-1">タグ</label>
+                    <input type="text" id="tag" placeholder="例：Excel, 料理, 習慣" required
+                           class="input-field w-full p-4 rounded-2xl bg-green-50 placeholder-gray-400">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-green-700 mb-2 ml-1">内容</label>
+                    <textarea id="content" rows="6" placeholder="具体的なエピソードやノウハウを自由に書いてください" required
+                              class="input-field w-full p-4 rounded-2xl bg-green-50 placeholder-gray-400 leading-relaxed"></textarea>
+                </div>
+
+                <div class="pt-4">
+                    <button type="submit" id="submitBtn" 
+                            class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-2xl shadow-lg transition-all transform active:scale-95 flex justify-center items-center gap-2">
+                        <span>知恵をライブラリに送る</span>
+                    </button>
+                    <p class="text-center text-xs text-gray-400 mt-4">
+                        ※投稿内容は管理者の承認後にライブラリへ公開されます。
+                    </p>
+                </div>
+            </form>
+        </div>
+
+        <div class="text-center mt-8">
+            <a href="index.html" class="text-green-600 hover:text-green-700 font-bold text-sm underline underline-offset-4">
+                ← ライブラリに戻る
+            </a>
+        </div>
+    </main>
+
+    <script>
+        // ★ここにデプロイしたGASのウェブアプリURLを貼り付けてください
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwbTSxkIzbfrhPQCMnGU72KPFaqL9Mo-UaUQReyyBnAcA_feN6PGPiYdkx5KDT5Zyiq/exec";
+
+        document.getElementById('postForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btn = document.getElementById('submitBtn');
+            const originalBtnText = btn.innerHTML;
+            
+            // 送信中の状態
+            btn.disabled = true;
+            btn.innerHTML = '<span class="animate-spin text-xl">↻</span> 送信中...';
+            btn.classList.add('opacity-70', 'cursor-not-allowed');
+
+            const payload = {
+                category: document.getElementById('category').value,
+                tag: document.getElementById('tag').value,
+                content: document.getElementById('content').value
+            };
+
+            try {
+                // GASへのPOST送信
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // GASのCORS制限回避
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                // 完了アラートとリダイレクト
+                alert('ありがとうございます！投稿を受け付けました。\n管理者が内容を確認した後、ライブラリに反映されます。');
+                window.location.href = "index.html";
+
+            } catch (error) {
+                console.error('Submission error:', error);
+                alert('送信に失敗しました。ネットワーク環境を確認して、もう一度お試しください。');
+                
+                // ボタンを元に戻す
+                btn.disabled = false;
+                btn.innerHTML = originalBtnText;
+                btn.classList.remove('opacity-70', 'cursor-not-allowed');
+            }
+        });
+    </script>
+</body>
+</html>
